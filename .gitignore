@@ -1,0 +1,20 @@
+# WoW Addon - Jogu
+# Ignore archived versions and development files
+
+# Archive directories
+OLD Versions/
+
+# Saved variables (user-specific data)
+*.lua.bak
+*.toc.bak
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
