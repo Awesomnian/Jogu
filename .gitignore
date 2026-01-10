@@ -4,6 +4,9 @@
 # Archive directories
 OLD Versions/
 
+# Track the release zip
+!Jogu.zip
+
 # Saved variables (user-specific data)
 *.lua.bak
 *.toc.bak
