@@ -4,7 +4,7 @@
 **GitHub:** https://github.com/awesomnian  
 **Version:** 0.7  
 **Addon location:**
-Either right-click and save-as the TOC and LUA files into the below folder or right-click and save-as the .zip file and extract it to that folder.
+Either right-click and save-as the TOC and LUA files into the below folder (or wherever your MoP Classic folder lives) or right-click and save-as the .zip file and extract it to that folder.
 ```
 C:\Program Files (x86)\World of Warcraft\_classic_\Interface\AddOns\Jogu
 ```
