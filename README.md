@@ -26,7 +26,7 @@ It’s lightweight, at around 100kb as of v0.7.
 
 - A message on login telling you what the bonus for tomorrow is - default to off.
 - Where in the cycle your current server is and ability to manually update this if it’s not correct, this will be remembered and predictions will be accurate from then on.
-- ”Did I do my farm today on X?” - smart tracking for any alts that perform farming activities, notably harvesting crops or doing the Ironpaw Token daily quest from Halfhill Market which is given by a different Master each day if they have the Addon enabled.
+- ”Did I do my farm today on X?” - smart tracking for any alts that perform farming activities if they have the Addon enabled. Specifically, harvesting crops or doing the Ironpaw Token daily quest from Halfhill Market which is given by a different Master each day.
 - Uses in-game tooltip for each of the crops so any addons like TSM or Auctionator that enrich tooltips and show things like which alts have how many items will work.
 - Nomi’s Cooking Bell status/different interface if a character has this in their bags.
 
