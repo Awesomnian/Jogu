@@ -12,13 +12,21 @@ C:\Program Files (x86)\World of Warcraft\_classic_\Interface\AddOns\Jogu
 
 ## Purpose
 
-Jogu replaces the functionality of the broken in-game NPC "Jogu the Drunk" who used to predict tomorrow's bonus crop for Sunsong Ranch farming. The NPC has been bugged indefinitely and Blizzard removed his prediction feature rather than fixing it.
+Jogu the Drunk is an NPC in World of Warcraft who would tell you what to plant today for bonus crops tomorrow. His predictions have not worked for most of Mists of Pandaria Classic and he has recently been disabled. This addon gives you that prediction ability and a few other useful bits of info. 
+
+Type /jogu to open interface. 
+
+It’s lightweight, at around 100kb as of v0.7.
 
 ---
 
-## Interface
+## TL;DR
 
-`/jogu` slash command toggles the prediction window
+- A message on login telling you what the bonus for tomorrow is - default to off.
+- Where in the cycle your current server is and ability to manually update this if it’s not correct, this will be remembered and predictions will be accurate from then on.
+- ”Did I do my farm today on X?” - smart tracking for any alts that perform farming activities, notably harvesting crops or doing the Ironpaw Token daily quest from Halfhill Market which is given by a different Master each day if they have the Addon enabled.
+- Uses in-game tooltip for each of the crops so any addons like TSM or Auctionator that enrich tooltips and show things like which alts have how many items will work.
+- Nomi’s Cooking Bell status/different interface if a character has this in their bags.
 
 ---
 
