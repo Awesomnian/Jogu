@@ -1,7 +1,7 @@
--- Jogu: Crop Prediction Addon for MoP Classic
+-- Jogu Knows: Crop Prediction Addon for MoP Classic
 -- Predicts tomorrow's bonus crop for Sunsong Ranch
 -- Interface: 50400 (MoP Classic)
--- Version: 0.7 - Alt Tracking
+-- Version: 1.0 - World Boss Tracking + UI Polish
 
 local CROPS = {
     {id = 74846, name = "Witchberries"},
@@ -38,14 +38,42 @@ local MASTER_TOKEN_QUESTS = {
 
 local COOKING_SCHOOL_BELL_ID = 86425
 local NOMI_DAILY_QUEST_ID = 31337
+local TRUFFLE_SHUFFLE_QUEST_ID = 30330
+local VALLEY_OF_FOUR_WINDS_MAP_ID = 376
 local REFERENCE_EPOCH_DAY = 20457
 
+-- Region-specific reset configuration (all times fixed UTC, no DST adjustment)
+-- GetCurrentRegion(): 1=US/OCE, 2=Korea, 3=Europe, 4=Taiwan, 5=China
+local REGION_RESET_CONFIG = {
+    [1] = { dailyResetHour = 15, weeklyRefEpochDay = 20460 },  -- NA/OCE: 15:00 UTC, Wed Jan 7 2026
+    [2] = { dailyResetHour = 0,  weeklyRefEpochDay = 20461 },  -- Korea:  00:00 UTC, Thu Jan 8 2026
+    [3] = { dailyResetHour = 7,  weeklyRefEpochDay = 20460 },  -- Europe: 07:00 UTC, Wed Jan 7 2026
+    [4] = { dailyResetHour = 0,  weeklyRefEpochDay = 20461 },  -- Taiwan: 00:00 UTC, Thu Jan 8 2026
+    [5] = { dailyResetHour = 0,  weeklyRefEpochDay = 20461 },  -- China:  00:00 UTC, Thu Jan 8 2026
+}
+
+local function GetRegionResetConfig()
+    local region = GetCurrentRegion and GetCurrentRegion() or 1
+    return REGION_RESET_CONFIG[region] or REGION_RESET_CONFIG[1]
+end
+
+-- World Boss weekly lockout quest IDs (hidden quests flagged on kill)
+local WORLD_BOSSES = {
+    {name = "Sha", fullName = "Sha of Anger", questID = 32099},
+    {name = "Gal", fullName = "Galleon", questID = 32098},
+    {name = "Nal", fullName = "Nalak", questID = 32518},
+    {name = "Oon", fullName = "Oondasta", questID = 32519},
+    {name = "Ord", fullName = "Ordos", questID = 33117, futureContent = true},
+}
+
 local JoguFrame = nil
-local expandedPanel = nil
+local worldBossPanel = nil
 local calibrationMode = false
 local UpdateJoguUI  -- Forward declaration
 local UpdateExpandedPanel  -- Forward declaration
+local UpdateWorldBossPanel  -- Forward declaration
 local GetCurrentEpochDay  -- Forward declaration
+local GetCurrentWeekEpoch  -- Forward declaration
 
 -- Apply or remove calibration mode fade effect
 local function SetCalibrationFade(enabled)
@@ -113,6 +141,7 @@ function Jogu_OnLoad()
     if not JoguDB.characters then
         JoguDB.characters = {}
     end
+    -- ordosEverKilled defaults to nil/false, set true on first Ordos kill
 end
 
 local function GetUTCTime()
@@ -121,11 +150,20 @@ local function GetUTCTime()
     return utcTime, utcDate
 end
 
--- Get current epoch day (15:00 UTC reset)
+-- Get current epoch day (region-aware daily reset)
 GetCurrentEpochDay = function()
     local utcTime, utcDate = GetUTCTime()
-    local farmingDayOffset = (utcDate.hour < 15) and -1 or 0
+    local resetHour = GetRegionResetConfig().dailyResetHour
+    local farmingDayOffset = (utcDate.hour < resetHour) and -1 or 0
     return math.floor(utcTime / 86400) + farmingDayOffset
+end
+
+-- Get epoch day of the current weekly reset (region-aware reset day)
+GetCurrentWeekEpoch = function()
+    local currentEpochDay = GetCurrentEpochDay()
+    local refDay = GetRegionResetConfig().weeklyRefEpochDay
+    local daysSinceReset = (currentEpochDay - refDay) % 7
+    return currentEpochDay - daysSinceReset
 end
 
 -- Register or update character in tracking database
@@ -156,7 +194,7 @@ end
 local function MarkHarvested()
     local key = RegisterCharacter()
     JoguDB.characters[key].lastHarvestEpoch = GetCurrentEpochDay()
-    if expandedPanel and expandedPanel:IsVisible() then
+    if JoguFrame and JoguFrame:IsVisible() then
         UpdateExpandedPanel()
     end
 end
@@ -165,14 +203,39 @@ end
 local function MarkMasterToken()
     local key = RegisterCharacter()
     JoguDB.characters[key].lastMasterTokenEpoch = GetCurrentEpochDay()
-    if expandedPanel and expandedPanel:IsVisible() then
+    if JoguFrame and JoguFrame:IsVisible() then
         UpdateExpandedPanel()
+    end
+end
+
+-- Check and store world boss kill status for current character
+local function UpdateWorldBossStatus()
+    local key = RegisterCharacter()
+    local data = JoguDB.characters[key]
+    if not data.worldBosses then
+        data.worldBosses = {}
+    end
+    local currentWeek = GetCurrentWeekEpoch()
+    for _, boss in ipairs(WORLD_BOSSES) do
+        if C_QuestLog.IsQuestFlaggedCompleted(boss.questID) then
+            data.worldBosses[boss.questID] = currentWeek
+            -- Track Ordos ever-killed globally
+            if boss.futureContent then
+                if not JoguDB.ordosEverKilled then
+                    JoguDB.ordosEverKilled = true
+                end
+            end
+        end
+    end
+    if worldBossPanel and worldBossPanel:IsVisible() then
+        UpdateWorldBossPanel()
     end
 end
 
 local function GetTomorrowBonusDay()
     local utcTime, utcDate = GetUTCTime()
-    local farmingDayOffset = (utcDate.hour < 15) and -1 or 0
+    local resetHour = GetRegionResetConfig().dailyResetHour
+    local farmingDayOffset = (utcDate.hour < resetHour) and -1 or 0
     local currentEpochDay = math.floor(utcTime / 86400) + farmingDayOffset
     
     -- Check for realm-specific calibration
@@ -185,7 +248,7 @@ local function GetTomorrowBonusDay()
         local daysSinceCalibration = currentEpochDay - calibration.epochDay
         currentDay = ((calibration.todayCropIndex - 1 + daysSinceCalibration) % 10) + 1
     else
-        -- Default calculation (calibrated for Arugal)
+        -- Default calculation (calibrated for NA/OCE region)
         local daysSinceRef = currentEpochDay - REFERENCE_EPOCH_DAY
         currentDay = ((daysSinceRef % 10) + 10) % 10 + 1
     end
@@ -197,7 +260,7 @@ end
 local function GetSecondsUntilReset()
     local utcTime, utcDate = GetUTCTime()
     local secondsSinceMidnight = utcDate.hour * 3600 + utcDate.min * 60 + utcDate.sec
-    local targetSeconds = 15 * 3600
+    local targetSeconds = GetRegionResetConfig().dailyResetHour * 3600
     if secondsSinceMidnight < targetSeconds then
         return targetSeconds - secondsSinceMidnight
     else
@@ -225,89 +288,80 @@ local function IsNomiQuestCompletedToday()
     return C_QuestLog.IsQuestFlaggedCompleted(NOMI_DAILY_QUEST_ID)
 end
 
--- Create the expandable alt-tracking panel
-local function CreateExpandedPanel()
-    -- Match height with main Jogu frame
-    local panelHeight = JoguFrame:GetHeight()
-    
-    local panel = CreateFrame("Frame", "JoguExpandedPanel", UIParent, "BackdropTemplate")
-    panel:SetSize(350, panelHeight)
-    panel:SetPoint("LEFT", JoguFrame, "RIGHT", 5, 0)
-    panel:SetFrameStrata("MEDIUM")
-    panel:SetFrameLevel(101)
-    
-    panel:SetBackdrop({
-        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-        tile = true, tileSize = 32, edgeSize = 32,
-        insets = { left = 11, right = 12, top = 12, bottom = 11 }
-    })
-    
-    -- Title
-    panel.title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    panel.title:SetPoint("TOP", 0, -20)
-    panel.title:SetText("Expanded Content")
-    panel.title:SetTextColor(1, 0.82, 0)
-    
-    -- Close button
-    local closeBtn = CreateFrame("Button", nil, panel, "UIPanelCloseButton")
-    closeBtn:SetPoint("TOPRIGHT", -5, -5)
-    closeBtn:SetScript("OnClick", function()
-        panel:Hide()
-        if JoguFrame.expandBtn then
-            JoguFrame.expandBtn:SetText("Expanded Content >")
+-- Get display name for a character, adding realm suffix only when multiple realms exist
+-- Returns formatted name and a table mapping key -> displayName for all characters
+local function GetCharacterDisplayNames()
+    if not JoguDB or not JoguDB.characters then return {} end
+
+    -- Count characters per realm
+    local realmCounts = {}
+    local totalChars = 0
+    for key, _ in pairs(JoguDB.characters) do
+        local realm = key:match("^(.+)%-")
+        realmCounts[realm] = (realmCounts[realm] or 0) + 1
+        totalChars = totalChars + 1
+    end
+
+    -- Find how many distinct realms
+    local numRealms = 0
+    for _ in pairs(realmCounts) do
+        numRealms = numRealms + 1
+    end
+
+    -- If only one realm, no suffixes needed
+    if numRealms <= 1 then
+        local names = {}
+        for key, _ in pairs(JoguDB.characters) do
+            local name = key:match("^.+%-(.+)$")
+            names[key] = name
         end
-    end)
-    
-    -- Column headers - centered in their respective columns
-    -- Columns are: Name (0-93px), Farmed (93-186px), Daily Token (186-280px)
-    -- Headers positioned in panel coords (scroll starts at x=20, so add 20 to scrollChild coords)
-    local farmedHeader = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    farmedHeader:SetPoint("TOP", panel, "TOPLEFT", 160, -50)  -- 140 + 20 offset
-    farmedHeader:SetText("Farmed")
-    farmedHeader:SetTextColor(1, 0.82, 0)
-    
-    local tokenHeader = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    tokenHeader:SetPoint("TOP", panel, "TOPLEFT", 253, -50)  -- 233 + 20 offset
-    tokenHeader:SetText("Daily Token")
-    tokenHeader:SetTextColor(1, 0.82, 0)
-    
-    -- Scroll frame for character list
-    local scrollFrame = CreateFrame("ScrollFrame", "JoguScrollFrame", panel, "UIPanelScrollFrameTemplate")
-    scrollFrame:SetPoint("TOPLEFT", 20, -70)
-    scrollFrame:SetPoint("BOTTOMRIGHT", -30, 20)
-    panel.scrollFrame = scrollFrame
-    
-    local scrollChild = CreateFrame("Frame", nil, scrollFrame)
-    scrollChild:SetSize(280, 1)
-    scrollFrame:SetScrollChild(scrollChild)
-    panel.scrollChild = scrollChild
-    
-    panel:SetScript("OnShow", function()
-        -- Update height to match main frame in case it changed (bell added/removed)
-        panel:SetHeight(JoguFrame:GetHeight())
-        UpdateExpandedPanel()
-    end)
-    
-    panel:SetScript("OnHide", function()
-        if JoguFrame.expandBtn then
-            JoguFrame.expandBtn:SetText("Expanded Content >")
+        return names
+    end
+
+    -- Find the majority realm (most characters)
+    local majorityRealm = nil
+    local majorityCount = 0
+    for realm, count in pairs(realmCounts) do
+        if count > majorityCount then
+            majorityRealm = realm
+            majorityCount = count
         end
-    end)
-    
-    -- Register for ESC key closing
-    tinsert(UISpecialFrames, "JoguExpandedPanel")
-    
-    panel:Hide()
-    return panel
+    end
+
+    -- Check if it's a tie (multiple realms share the max count)
+    local isTied = false
+    for realm, count in pairs(realmCounts) do
+        if count == majorityCount and realm ~= majorityRealm then
+            isTied = true
+            break
+        end
+    end
+
+    -- Build display names
+    local names = {}
+    for key, _ in pairs(JoguDB.characters) do
+        local realm = key:match("^(.+)%-")
+        local name = key:match("^.+%-(.+)$")
+
+        -- Suffix if not on majority realm, or if tied suffix everyone
+        if isTied or realm ~= majorityRealm then
+            -- Strip parenthetical like "(AU)" from realm before abbreviating
+            local cleanRealm = realm:match("^(%S+)") or realm
+            local suffix = string.upper(string.sub(cleanRealm, 1, 2))
+            names[key] = name .. "-" .. suffix
+        else
+            names[key] = name
+        end
+    end
+    return names
 end
 
--- Update the expanded panel with current character data
+-- Update the alt tracking section in the main frame
 UpdateExpandedPanel = function()
-    if not expandedPanel or not expandedPanel.scrollChild then return end
-    
-    local scrollChild = expandedPanel.scrollChild
-    local scrollFrame = expandedPanel.scrollFrame
+    if not JoguFrame or not JoguFrame.altScrollChild then return end
+
+    local scrollChild = JoguFrame.altScrollChild
+    local scrollFrame = JoguFrame.altScrollFrame
     
     -- Clear existing rows
     if scrollChild.rows then
@@ -321,20 +375,21 @@ UpdateExpandedPanel = function()
     -- Get character list with status
     local chars = {}
     local currentEpoch = GetCurrentEpochDay()
-    
+    local displayNames = GetCharacterDisplayNames()
+
     for key, data in pairs(JoguDB.characters) do
-        local name = key:match("^.+%-(.+)$")
+        local name = displayNames[key] or key:match("^.+%-(.+)$")
         local harvested = data.lastHarvestEpoch == currentEpoch
         local questDone = data.lastMasterTokenEpoch == currentEpoch
-        
+
         -- Characters <90 treated as "quest done" for sorting purposes
         if data.level < 90 then
             questDone = true
         end
-        
+
         table.insert(chars, {
-            key = key, 
-            name = name, 
+            key = key,
+            name = name,
             data = data,
             harvested = harvested,
             questDone = questDone
@@ -379,31 +434,36 @@ UpdateExpandedPanel = function()
     
     for i, char in ipairs(chars) do
         local row = CreateFrame("Frame", nil, scrollChild, "BackdropTemplate")
-        row:SetSize(280, 30)
+        row:SetSize(310, 30)
         row:SetPoint("TOPLEFT", 0, yOffset)
-        
+        row:SetPoint("RIGHT", scrollChild, "RIGHT", 0, 0)
+
         row:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8x8",
             edgeFile = nil,
         })
         row:SetBackdropColor(0.1, 0.1, 0.1, 0.3)
-        
-        -- Character name - first column (0-93px)
+
+        -- Character name
         local nameText = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         nameText:SetPoint("LEFT", 5, 0)
         nameText:SetWidth(85)
         nameText:SetJustifyH("LEFT")
-        nameText:SetText(char.name .. " (" .. char.data.level .. ")")
-        
+        if char.data.level < 90 then
+            nameText:SetText(char.name .. " (" .. char.data.level .. ")")
+        else
+            nameText:SetText(char.name)
+        end
+
         local classColor = RAID_CLASS_COLORS[char.data.class]
         if classColor then
             nameText:SetTextColor(classColor.r, classColor.g, classColor.b)
         end
-        
-        -- Harvest status button - centered in Farmed column (93-186px, center at 140)
+
+        -- Harvest status button - centered under Farmed header (header at scroll x=150)
         local harvestBtn = CreateFrame("Button", nil, row)
         harvestBtn:SetSize(20, 20)
-        harvestBtn:SetPoint("LEFT", row, "LEFT", 130, 0)  -- 140 - 10 (half icon width)
+        harvestBtn:SetPoint("LEFT", row, "LEFT", 140, 0)
         
         local harvestIcon = harvestBtn:CreateTexture(nil, "ARTWORK")
         harvestIcon:SetAllPoints()
@@ -432,10 +492,10 @@ UpdateExpandedPanel = function()
             UpdateExpandedPanel()
         end)
         
-        -- Master Token status button - centered in Daily Token column (186-280px, center at 233)
+        -- Master Token status button - centered under Daily Token header (header at scroll x=243)
         local tokenBtn = CreateFrame("Button", nil, row)
         tokenBtn:SetSize(20, 20)
-        tokenBtn:SetPoint("LEFT", row, "LEFT", 223, 0)  -- 233 - 10 (half icon width)
+        tokenBtn:SetPoint("LEFT", row, "LEFT", 233, 0)
         
         local tokenIcon = tokenBtn:CreateTexture(nil, "ARTWORK")
         tokenIcon:SetAllPoints()
@@ -480,10 +540,10 @@ UpdateExpandedPanel = function()
             tokenBtn:SetScript("OnLeave", GameTooltip_Hide)
         end
         
-        -- Delete button
+        -- Delete button - far right of row
         local deleteBtn = CreateFrame("Button", nil, row)
         deleteBtn:SetSize(20, 20)
-        deleteBtn:SetPoint("RIGHT", -5, 0)
+        deleteBtn:SetPoint("RIGHT", row, "RIGHT", -5, 0)
         deleteBtn:SetNormalTexture("Interface\\Buttons\\UI-GroupLoot-Pass-Up")
         deleteBtn:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
         
@@ -515,9 +575,200 @@ UpdateExpandedPanel = function()
     end
 end
 
+-- Create the world boss tracking panel
+local function CreateWorldBossPanel()
+    local panelHeight = JoguFrame:GetHeight()
+
+    local panel = CreateFrame("Frame", "JoguWorldBossPanel", UIParent, "BackdropTemplate")
+    panel:SetSize(350, panelHeight)
+    panel:SetPoint("LEFT", JoguFrame, "RIGHT", 5, 0)
+    panel:SetFrameStrata("MEDIUM")
+    panel:SetFrameLevel(102)
+
+    panel:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+        edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+        tile = true, tileSize = 32, edgeSize = 32,
+        insets = { left = 11, right = 12, top = 12, bottom = 11 }
+    })
+
+    -- Title
+    panel.title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    panel.title:SetPoint("TOP", 0, -20)
+    panel.title:SetText("Jogu Knows More")
+    panel.title:SetTextColor(1, 0.82, 0)
+
+    -- Close button
+    local closeBtn = CreateFrame("Button", nil, panel, "UIPanelCloseButton")
+    closeBtn:SetPoint("TOPRIGHT", -5, -5)
+    closeBtn:SetScript("OnClick", function()
+        panel:Hide()
+        if JoguFrame.expandBtn then
+            JoguFrame.expandBtn:SetText("Jogu Knows More >")
+        end
+    end)
+
+    -- Subtitle
+    panel.subtitle = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    panel.subtitle:SetPoint("TOP", 0, -45)
+    panel.subtitle:SetText("World Boss Weekly Lockouts")
+    panel.subtitle:SetTextColor(0.9, 0.9, 0.9)
+
+    -- Build boss column headers - all 5 bosses always shown
+    local headerY = -70
+
+    panel.bossHeaders = {}
+    local bossStartX = 120
+    local bossSpacing = 45
+
+    for i, boss in ipairs(WORLD_BOSSES) do
+        local header = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        local xPos = bossStartX + (i - 1) * bossSpacing
+        header:SetPoint("TOP", panel, "TOPLEFT", xPos, headerY)
+        header:SetText(boss.name)
+        header:SetWidth(40)
+        header:SetJustifyH("CENTER")
+        -- Grey out Ordos header if not yet available
+        if boss.futureContent and not JoguDB.ordosEverKilled then
+            header:SetTextColor(0.4, 0.4, 0.4)
+        else
+            header:SetTextColor(1, 0.82, 0)
+        end
+        panel.bossHeaders[i] = header
+    end
+
+    -- Scroll frame for character list
+    local scrollFrame = CreateFrame("ScrollFrame", "JoguWorldBossScrollFrame", panel, "UIPanelScrollFrameTemplate")
+    scrollFrame:SetPoint("TOPLEFT", 20, -90)
+    scrollFrame:SetPoint("BOTTOMRIGHT", -30, 20)
+    panel.scrollFrame = scrollFrame
+
+    local scrollChild = CreateFrame("Frame", nil, scrollFrame)
+    scrollChild:SetSize(280, 1)
+    scrollFrame:SetScrollChild(scrollChild)
+    panel.scrollChild = scrollChild
+
+    panel:SetScript("OnShow", function()
+        panel:SetHeight(JoguFrame:GetHeight())
+        panel:SetPoint("LEFT", JoguFrame, "RIGHT", 5, 0)
+        UpdateWorldBossPanel()
+    end)
+
+    panel:SetScript("OnHide", function()
+        if JoguFrame.expandBtn then
+            JoguFrame.expandBtn:SetText("Jogu Knows More >")
+        end
+    end)
+
+    tinsert(UISpecialFrames, "JoguWorldBossPanel")
+
+    panel:Hide()
+    return panel
+end
+
+-- Update the world boss panel with current character data
+UpdateWorldBossPanel = function()
+    if not worldBossPanel or not worldBossPanel.scrollChild then return end
+
+    local scrollChild = worldBossPanel.scrollChild
+    local scrollFrame = worldBossPanel.scrollFrame
+
+    -- Clear existing rows
+    if scrollChild.rows then
+        for _, row in ipairs(scrollChild.rows) do
+            row:Hide()
+            row:SetParent(nil)
+        end
+    end
+    scrollChild.rows = {}
+
+    local currentWeek = GetCurrentWeekEpoch()
+
+    -- Gather characters
+    local chars = {}
+    local displayNames = GetCharacterDisplayNames()
+    for key, data in pairs(JoguDB.characters) do
+        local name = displayNames[key] or key:match("^.+%-(.+)$")
+        table.insert(chars, {key = key, name = name, data = data})
+    end
+    table.sort(chars, function(a, b) return a.name < b.name end)
+
+    local yOffset = 0
+    local bossStartX = 100
+    local bossSpacing = 45
+
+    for _, char in ipairs(chars) do
+        local row = CreateFrame("Frame", nil, scrollChild, "BackdropTemplate")
+        row:SetSize(320, 30)
+        row:SetPoint("TOPLEFT", 0, yOffset)
+
+        row:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8x8",
+            edgeFile = nil,
+        })
+        row:SetBackdropColor(0.1, 0.1, 0.1, 0.3)
+
+        -- Character name
+        local nameText = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        nameText:SetPoint("LEFT", 5, 0)
+        nameText:SetWidth(90)
+        nameText:SetJustifyH("LEFT")
+        nameText:SetText(char.name)
+
+        local classColor = RAID_CLASS_COLORS[char.data.class]
+        if classColor then
+            nameText:SetTextColor(classColor.r, classColor.g, classColor.b)
+        end
+
+        -- Boss kill status icons - all 5 bosses, centered under headers
+        local bosses = char.data.worldBosses or {}
+        for i, boss in ipairs(WORLD_BOSSES) do
+            local xPos = bossStartX + (i - 1) * bossSpacing
+
+            if boss.futureContent and not JoguDB.ordosEverKilled then
+                -- Ordos not yet available - show greyed dash like sub-90 daily token
+                local dash = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+                dash:SetPoint("LEFT", row, "LEFT", xPos - 10, 0)
+                dash:SetWidth(20)
+                dash:SetJustifyH("CENTER")
+                dash:SetText("—")
+                dash:SetTextColor(0.4, 0.4, 0.4)
+            else
+                local icon = row:CreateTexture(nil, "ARTWORK")
+                icon:SetSize(20, 20)
+                icon:SetPoint("LEFT", row, "LEFT", xPos - 10, 0)
+
+                local killed = bosses[boss.questID] and bosses[boss.questID] == currentWeek
+                if killed then
+                    icon:SetTexture("Interface\\RaidFrame\\ReadyCheck-Ready")
+                else
+                    icon:SetTexture("Interface\\RaidFrame\\ReadyCheck-NotReady")
+                end
+            end
+        end
+
+        table.insert(scrollChild.rows, row)
+        yOffset = yOffset - 35
+    end
+
+    local contentHeight = math.max(1, #chars * 35)
+    scrollChild:SetHeight(contentHeight)
+
+    local frameHeight = scrollFrame:GetHeight()
+    if contentHeight <= frameHeight then
+        scrollFrame.ScrollBar:Hide()
+    else
+        scrollFrame.ScrollBar:Show()
+    end
+end
+
+local FRAME_LEFT_WIDTH = 380  -- Left half for crop predictions
+local FRAME_RIGHT_WIDTH = 350 -- Right half for alt tracking
+local FRAME_TOTAL_WIDTH = FRAME_LEFT_WIDTH + FRAME_RIGHT_WIDTH
+
 local function CreateJoguFrame()
     local frame = CreateFrame("Frame", "JoguMainFrame", UIParent, "BackdropTemplate")
-    frame:SetSize(380, FRAME_HEIGHT_NO_BELL)
+    frame:SetSize(FRAME_TOTAL_WIDTH, FRAME_HEIGHT_NO_BELL)
     
     -- UIPanelLayout for profession-like window management
     frame:SetAttribute("UIPanelLayout-defined", true)
@@ -532,10 +783,10 @@ local function CreateJoguFrame()
     frame:SetScript("OnDragStart", frame.StartMoving)
     frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
     
-    -- Close expanded panel when main panel closes
+    -- Close world boss panel when main panel closes
     frame:SetScript("OnHide", function()
-        if expandedPanel and expandedPanel:IsVisible() then
-            expandedPanel:Hide()
+        if worldBossPanel and worldBossPanel:IsVisible() then
+            worldBossPanel:Hide()
         end
     end)
     
@@ -550,25 +801,22 @@ local function CreateJoguFrame()
         insets = { left = 11, right = 12, top = 12, bottom = 11 }
     })
     
-    -- Title
+    -- Title (centered over left half)
     frame.title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    frame.title:SetPoint("TOP", 0, -20)
-    frame.title:SetText("Jogu's Crop Predictions")
+    frame.title:SetPoint("TOP", -175, -20)
+    frame.title:SetText("Jogu Knows")
     frame.title:SetTextColor(1, 0.82, 0)
-    
+
     -- Close button
     local closeBtn = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
     closeBtn:SetPoint("TOPRIGHT", -5, -5)
     closeBtn:SetScript("OnClick", function()
-        -- Close expanded panel if it's open
-        if expandedPanel and expandedPanel:IsVisible() then
-            expandedPanel:Hide()
-        end
+        HideUIPanel(frame)
     end)
-    
-    -- Flavor text
+
+    -- Flavor text (centered over left half)
     frame.flavorText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    frame.flavorText:SetPoint("TOP", 0, -45)
+    frame.flavorText:SetPoint("TOP", -175, -45)
     frame.flavorText:SetWidth(340)
     frame.flavorText:SetJustifyH("CENTER")
     frame.flavorText:SetText(FLAVOR_TEXT)
@@ -629,9 +877,7 @@ local function CreateJoguFrame()
             if calibrationMode then
                 -- Save calibration for this realm
                 local realmName = GetRealmName()
-                local utcTime, utcDate = GetUTCTime()
-                local farmingDayOffset = (utcDate.hour < 15) and -1 or 0
-                local currentEpochDay = math.floor(utcTime / 86400) + farmingDayOffset
+                local currentEpochDay = GetCurrentEpochDay()
                 
                 JoguDB.realmCalibration[realmName] = {
                     todayCropIndex = self.cropIndex,
@@ -644,16 +890,16 @@ local function CreateJoguFrame()
                 SetCalibrationFade(false)
                 UpdateJoguUI()
                 
-                print("|cFF00FF00[Jogu]|r Calibrated for " .. realmName .. ": Today's bonus crop is " .. CROPS[self.cropIndex].name)
+                print("|cFF00FF00[Jogu Knows]|r Calibrated for " .. realmName .. ": Today's bonus crop is " .. CROPS[self.cropIndex].name)
             end
         end)
         
         frame.cropButtons[i] = btn
     end
 
-    -- "Plant today" text - positioned below the circle
+    -- "Plant today" text - positioned below the circle (left half)
     frame.plantText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    frame.plantText:SetPoint("TOP", 0, -420)
+    frame.plantText:SetPoint("TOP", -175, -420)
     frame.plantText:SetTextColor(1, 0.82, 0)
     
     -- Calibration button - "?" button on same line as plant text, to the left
@@ -682,22 +928,22 @@ local function CreateJoguFrame()
         end
     end)
     
-    -- Timer text
+    -- Timer text (left half)
     frame.timerText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    frame.timerText:SetPoint("TOP", 0, -445)
+    frame.timerText:SetPoint("TOP", -175, -445)
     frame.timerText:SetTextColor(0.8, 0.8, 0.8)
-    
-    -- Separator line (hidden by default)
+
+    -- Separator line (hidden by default, left half)
     local separator = frame:CreateTexture(nil, "ARTWORK")
-    separator:SetPoint("TOP", 0, -470)
+    separator:SetPoint("TOP", -175, -470)
     separator:SetSize(320, 1)
     separator:SetColorTexture(0.5, 0.5, 0.5, 0.5)
     separator:Hide()
     frame.separator = separator
-    
-    -- Nomi section (hidden by default)
+
+    -- Nomi section (hidden by default, left half)
     frame.nomiSection = CreateFrame("Frame", nil, frame)
-    frame.nomiSection:SetPoint("TOP", 0, -485)
+    frame.nomiSection:SetPoint("TOP", -175, -485)
     frame.nomiSection:SetSize(340, 50)
     frame.nomiSection:Hide()
     
@@ -730,6 +976,52 @@ local function CreateJoguFrame()
     frame.nomiText:SetWidth(250)
     frame.nomiText:SetJustifyH("LEFT")
 
+    -- ==========================================
+    -- RIGHT HALF: Alt Farm Report
+    -- ==========================================
+
+    -- Vertical divider between left and right halves
+    local divider = frame:CreateTexture(nil, "ARTWORK")
+    divider:SetPoint("TOP", frame, "TOPLEFT", FRAME_LEFT_WIDTH, -15)
+    divider:SetPoint("BOTTOM", frame, "BOTTOMLEFT", FRAME_LEFT_WIDTH, 15)
+    divider:SetWidth(1)
+    divider:SetColorTexture(0.5, 0.5, 0.5, 0.5)
+
+    -- Alt Farm Report title
+    frame.altTitle = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    frame.altTitle:SetPoint("TOP", frame, "TOPLEFT", FRAME_LEFT_WIDTH + FRAME_RIGHT_WIDTH / 2, -20)
+    frame.altTitle:SetText("Alt Farm Report")
+    frame.altTitle:SetTextColor(1, 0.82, 0)
+
+    -- Subtitle
+    frame.altSubtitle = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    frame.altSubtitle:SetPoint("TOP", frame, "TOPLEFT", FRAME_LEFT_WIDTH + FRAME_RIGHT_WIDTH / 2, -45)
+    frame.altSubtitle:SetText("Ironpaw Token daily from Cooking Masters")
+    frame.altSubtitle:SetTextColor(0.9, 0.9, 0.9)
+
+    -- Column headers for alt tracking
+    local rightCenterX = FRAME_LEFT_WIDTH + FRAME_RIGHT_WIDTH / 2
+    local farmedHeader = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    farmedHeader:SetPoint("TOP", frame, "TOPLEFT", FRAME_LEFT_WIDTH + 160, -70)
+    farmedHeader:SetText("Farmed")
+    farmedHeader:SetTextColor(1, 0.82, 0)
+
+    local tokenHeader = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    tokenHeader:SetPoint("TOP", frame, "TOPLEFT", FRAME_LEFT_WIDTH + 253, -70)
+    tokenHeader:SetText("Daily Token")
+    tokenHeader:SetTextColor(1, 0.82, 0)
+
+    -- Scroll frame for character list (right half)
+    local altScrollFrame = CreateFrame("ScrollFrame", "JoguAltScrollFrame", frame, "UIPanelScrollFrameTemplate")
+    altScrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", FRAME_LEFT_WIDTH + 10, -90)
+    altScrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, 45)
+    frame.altScrollFrame = altScrollFrame
+
+    local altScrollChild = CreateFrame("Frame", nil, altScrollFrame)
+    altScrollChild:SetSize(FRAME_RIGHT_WIDTH - 50, 1)
+    altScrollFrame:SetScrollChild(altScrollChild)
+    frame.altScrollChild = altScrollChild
+
     -- Checkbox at bottom left
     frame.checkbox = CreateFrame("CheckButton", "JoguLoginCheckbox", frame, "UICheckButtonTemplate")
     frame.checkbox:SetPoint("BOTTOMLEFT", 25, 15)
@@ -749,18 +1041,18 @@ local function CreateJoguFrame()
     frame.expandBtn:SetPoint("TOP", frame.checkbox, "TOP", 0, 0)
     frame.expandBtn:SetPoint("BOTTOM", frame.checkbox, "BOTTOM", 0, 0)
     frame.expandBtn:SetWidth(150)
-    frame.expandBtn:SetText("Expanded Content >")
+    frame.expandBtn:SetText("Jogu Knows More >")
     frame.expandBtn:SetScript("OnClick", function(self)
-        if not expandedPanel then
-            expandedPanel = CreateExpandedPanel()
+        if not worldBossPanel then
+            worldBossPanel = CreateWorldBossPanel()
         end
-        
-        if expandedPanel:IsVisible() then
-            expandedPanel:Hide()
-            self:SetText("Expanded Content >")
+
+        if worldBossPanel:IsVisible() then
+            worldBossPanel:Hide()
+            self:SetText("Jogu Knows More >")
         else
-            expandedPanel:Show()
-            self:SetText("< Hide Content")
+            worldBossPanel:Show()
+            self:SetText("< Jogu Knows More")
         end
     end)
     
@@ -832,12 +1124,13 @@ end
 
 local function ToggleJoguFrame()
     if not JoguFrame then return end
-    
+
     if JoguFrame:IsVisible() then
         HideUIPanel(JoguFrame)
     else
         ShowUIPanel(JoguFrame)
         UpdateJoguUI()
+        UpdateExpandedPanel()
     end
 end
 
@@ -848,6 +1141,7 @@ local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("ADDON_LOADED")
 eventFrame:RegisterEvent("PLAYER_LOGIN")
 eventFrame:RegisterEvent("QUEST_TURNED_IN")
+eventFrame:RegisterEvent("QUEST_ACCEPTED")
 eventFrame:RegisterEvent("CHAT_MSG_LOOT")
 eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
     if event == "ADDON_LOADED" and arg1 == "Jogu" then
@@ -863,6 +1157,8 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         local level = UnitLevel("player")
         if level >= 86 then
             RegisterCharacter()
+            -- Check world boss kill status for this character
+            UpdateWorldBossStatus()
         end
         
         if JoguDB and JoguDB.showLoginMessage then
@@ -870,23 +1166,47 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
             local cropData = CROPS[tomorrowDay]
             local itemLink = select(2, GetItemInfo(cropData.id))
             if itemLink then
-                print("|cFF00FF00[Jogu]|r Plant " .. itemLink .. " today for bonus crops tomorrow!")
+                print("|cFF00FF00[Jogu Knows]|r Plant " .. itemLink .. " today for bonus crops tomorrow!")
             else
                 local item = Item:CreateFromItemID(cropData.id)
                 item:ContinueOnItemLoad(function()
                     local link = select(2, GetItemInfo(cropData.id))
-                    print("|cFF00FF00[Jogu]|r Plant " .. (link or cropData.name) .. " today for bonus crops tomorrow!")
+                    print("|cFF00FF00[Jogu Knows]|r Plant " .. (link or cropData.name) .. " today for bonus crops tomorrow!")
                 end)
             end
         end
         
     elseif event == "QUEST_TURNED_IN" then
-        -- Track Master Token daily quest completion (level 90 only)
         local questID = arg1
+        -- Track Master Token daily quest completion (level 90 only)
         if MASTER_TOKEN_QUESTS[questID] and UnitLevel("player") == 90 then
             MarkMasterToken()
         end
-        
+        -- Update Nomi status on main panel when Nomi daily is turned in
+        if questID == NOMI_DAILY_QUEST_ID and JoguFrame and JoguFrame:IsVisible() then
+            UpdateJoguUI()
+        end
+
+    elseif event == "QUEST_ACCEPTED" then
+        -- arg1 is questID on modern clients, or questLogIndex on legacy (with questID as arg2)
+        local questID = (arg1 and arg1 > 10000) and arg1 or select(1, ...)
+        -- Easter egg: Truffle Shuffle pickup
+        if questID == TRUFFLE_SHUFFLE_QUEST_ID then
+            print("|cFF00FF00[Jogu Knows]|r Planting and picking, share the mushrooms, please do - set your spores down at 32, 32!")
+            -- Place a map pin at 32, 32 in Valley of the Four Winds
+            if SlashCmdList["WAY"] then
+                -- TomTom installed: use /way with custom label
+                SlashCmdList["WAY"]("32 32 There's so mushroom!")
+            elseif C_Map and C_Map.SetUserWaypoint and UiMapPoint then
+                -- Fallback: native waypoint API (retail-only, may not exist in MoP Classic)
+                local point = UiMapPoint.CreateFromCoordinates(VALLEY_OF_FOUR_WINDS_MAP_ID, 0.32, 0.32)
+                C_Map.SetUserWaypoint(point)
+                if C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint then
+                    C_SuperTrack.SetSuperTrackedUserWaypoint(true)
+                end
+            end
+        end
+
     elseif event == "CHAT_MSG_LOOT" then
         -- Track Sunsong Ranch harvests (level 86+)
         local level = UnitLevel("player")
@@ -906,9 +1226,26 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         local qty = tonumber(quantity) or 1
         
         -- Constraint 2: Core crops must be 5-10 quantity
-        for _, crop in ipairs(CROPS) do
+        for cropIndex, crop in ipairs(CROPS) do
             if crop.id == itemID and qty >= 5 and qty <= 10 then
                 MarkHarvested()
+                -- Auto-calibration: 7 or 10 = bonus crop day, meaning this crop IS today's bonus
+                if qty == 7 or qty == 10 then
+                    local _, predictedToday = GetTomorrowBonusDay()
+                    if predictedToday ~= cropIndex then
+                        -- Current prediction is wrong — auto-correct the cycle position
+                        local realmName = GetRealmName()
+                        JoguDB.realmCalibration[realmName] = {
+                            todayCropIndex = cropIndex,
+                            epochDay = GetCurrentEpochDay()
+                        }
+                        print("|cFF00FF00[Jogu Knows]|r Auto-calibrated! Detected " .. crop.name .. " as today's bonus crop.")
+                        if JoguFrame and JoguFrame:IsVisible() then
+                            UpdateJoguUI()
+                            UpdateExpandedPanel()
+                        end
+                    end
+                end
                 return
             end
         end

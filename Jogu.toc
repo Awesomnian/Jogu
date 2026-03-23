@@ -1,8 +1,8 @@
 ## Interface: 50400
-## Title: Jogu
-## Notes: Predicts tomorrow's bonus crop for your Sunsong Ranch and tracks alt farming status
+## Title: Jogu Knows
+## Notes: Predicts tomorrow's bonus crop for your Sunsong Ranch, tracks alt farming status and world boss lockouts
 ## Author: Awesomnia
-## Version: 0.7
+## Version: 1.0
 ## SavedVariables: JoguDB
 
 Core.lua

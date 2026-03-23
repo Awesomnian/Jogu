@@ -1,8 +1,8 @@
-# 🐟 Jogu
+# 🐟 Jogu Knows
 
-**Author:** Awesomnia  
-**GitHub:** https://github.com/awesomnian  
-**Version:** 0.7  
+**Author:** Awesomnia
+**GitHub:** https://github.com/awesomnian
+**Version:** 1.0
 **Addon location:**
 Either right-click and save-as the TOC and LUA files into the below folder (or wherever your MoP Classic folder lives) or right-click and save-as the .zip file and extract it to that folder.
 ```
@@ -14,11 +14,11 @@ Once this is all working well and some final functionality is confirmed/complete
 
 ## Purpose
 
-Jogu the Drunk is an NPC in World of Warcraft who would tell you what to plant today for bonus crops tomorrow. His predictions have not worked for most of Mists of Pandaria Classic and he has recently been disabled. This addon gives you that prediction ability and a few other useful bits of info. 
+Jogu the Drunk is an NPC in World of Warcraft who would tell you what to plant today for bonus crops tomorrow. His predictions have not worked for most of Mists of Pandaria Classic and he has recently been disabled. This addon gives you that prediction ability and a few other useful bits of info.
 
-Type /jogu to open interface. 
+Type /jogu to open interface.
 
-It’s lightweight, at around 100kb as of v0.7.
+It’s lightweight, at around 100kb as of v1.0.
 
 ---
 
@@ -46,8 +46,8 @@ It’s lightweight, at around 100kb as of v0.7.
 
 ### Realm Calibration ("?" Button)
 - Different servers may have different points in the 10-day cycle
-- Default calculation is calibrated for Arugal (AU)
-- "?" button (left side near prediction text) allows users on other servers to calibrate
+- Default calculation is calibrated for the NA/OCE region (verified identical on Arugal and Pagle)
+- "?" button (left side near prediction text) allows users in other regions to calibrate
 - Clicking enters calibration mode: UI fades except crop wheel and prompt
 - User clicks whichever crop was TODAY's bonus on their server
 - Calibration saved per-realm in SavedVariables
@@ -65,8 +65,8 @@ It’s lightweight, at around 100kb as of v0.7.
 - Red text if quest not done: "You have not received your gift from Nomi today."
 - Section hidden entirely if character doesn't have the bell
 
-### Alt Tracking (v0.7 - Expanded Content Panel)
-- "Expanded Content >" button (bottom-right) reveals side panel with character tracking
+### Alt Farm Report (integrated right panel)
+- Alt tracking is displayed in the right half of the main window
 - **Automatic Registration:** Characters auto-register when they harvest crops or complete Master Token dailies
 - **Harvest Tracking:** Detects crop harvesting at Sunsong Ranch (5-10 core crops OR edge item seeds)
 - **Master Token Dailies:** Tracks completion of 5 Master Token quests (level 90 only):
@@ -87,7 +87,7 @@ It’s lightweight, at around 100kb as of v0.7.
 - Pressing ESC closes the window
 - Dynamic height adjustment based on Cooking School Bell presence
 - "?" calibration button aligned left with prediction text
-- "Expanded Content >" button aligned with checkbox at bottom-right
+- "Jogu Knows More >" button opens world boss lockout panel
 
 ---
 
@@ -186,7 +186,7 @@ It’s lightweight, at around 100kb as of v0.7.
 
 ---
 
-## Current State (v0.7 Complete)
+## Current State (v1.0 Complete)
 
 ✅ Fully functional crop prediction
 ✅ Correct 10-day cycle calculation
@@ -199,47 +199,28 @@ It’s lightweight, at around 100kb as of v0.7.
 ✅ Realm calibration for different server cycles
 ✅ Gold outer border highlight (not inner glow)
 ✅ Calibration mode fade effect for clarity
-✅ **Alt tracking system with automatic detection**
-✅ **Expanded Content panel with character management**
+✅ **Alt Farm Report with automatic detection**
+✅ **Integrated dual-panel layout (crop predictions + alt tracking)**
 ✅ **Manual completion toggles**
 ✅ **Priority-based sorting**
 ✅ **Class-colored character names**
+✅ **Multi-realm character suffix detection**
+✅ **World boss lockout tracking (Sha/Gal/Nal/Oon/Ord)**
+✅ **Jogu Knows More expansion panel**
 
 ---
 
-## Potential Future Functionality (v0.8 Preparation)
+## Potential Future Functionality
 
 ### Console Command Status (`/jogu status`)
-Print character farming status to chat console with:
-- Aligned columns (Character, Farmed, Daily Token)
-- Green/red colored YES/NO text
-- Same sorting as Expanded Content panel
-- Useful for quick status check without opening UI
+Print character farming status to chat console with aligned columns, colored status text, and same sorting as the Alt Farm Report panel.
 
 ### Server Detection and Cycle Positioning Automation
-Current evidence shows calculation is accurate for Arugal (AU), but uncertainty remains:
-- Does Pagle megaserver have different cycle position?
-- Do servers bundled with Pagle share its cycle or have independent cycles?
-- Automatic detection would eliminate need for manual calibration
+Automatic detection of crop cycle position per region to eliminate need for manual calibration outside NA/OCE.
 
-### Release Preparation for Wago.io/WowUp Distribution
-**Phase 1: Metadata & TOC Hardening**
-- Update Interface version for current MoP Classic build
-- Add/verify required headers (Title, Notes, Author, Version, Category)
-- Insert X-Wago-ID placeholder
-
-**Phase 2: Project Structure & Packager Config**
-- Create `.pkgmeta` file for BigWigs Packager
-- Create `.github/workflows/release.yml` for automated releases
-- Configure GitHub topics for WowUp discovery
-
-**Phase 3: Final Integration**
-- Update TOC with real X-Wago-ID
-- Configure GitHub Action with WAGO_API_TOKEN
-- Test automated release workflow
-
-**Note:** Check if v0.8 is solid enough to be v1.0 release during this phase.
+### Wago.io/WowUp Distribution
+Automated release pipeline with BigWigs Packager, GitHub Actions, and X-Wago-ID integration.
 
 ---
 
-*Version: 0.7 - January 10, 2026*
+*Version: 1.0 - March 23, 2026*

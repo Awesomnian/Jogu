@@ -1,0 +1,10 @@
+package-as: Jogu
+
+ignore:
+  - README.md
+  - LICENSE
+  - .gitignore
+  - OLD Versions
+  - screenshots
+  - "*.zip"
+  - RELEASE_GUIDE.md
