@@ -14,7 +14,9 @@ Once this is all working well and some final functionality is confirmed/complete
 
 ## Purpose
 
-Jogu the Drunk is an NPC in World of Warcraft who would tell you what to plant today for bonus crops tomorrow. His predictions have not worked for most of Mists of Pandaria Classic and he has recently been disabled. This addon gives you that prediction ability and a few other useful bits of info.
+Jogu the Drunk is an NPC in World of Warcraft who would tell you what to plant today for bonus crops tomorrow. His predictions have not worked for most of Mists of Pandaria Classic and he’s been recently forced into rehab. We’re still able to get messages from him which are shared via this addon.
+
+As his surprisingly un-fatal blood-alcohol level has dropped, his prescience has grown exponentially and he can now tell which characters have defeated world bosses each week!
 
 Type /jogu to open interface.
 
@@ -26,7 +28,8 @@ It’s lightweight, at around 100kb as of v1.0.
 
 - A message on login telling you what the bonus for tomorrow is - default to off.
 - Where in the cycle your current server is and ability to manually update this if it’s not correct, this will be remembered and predictions will be accurate from then on.
-- ”Did I do my farm today on X?” - smart tracking for any alts that perform farming activities if they have the Addon enabled. Specifically, harvesting crops or doing the Ironpaw Token daily quest from Halfhill Market which is given by a different Master each day.
+- Added smart detection for servers that may be at a different part of the cycle, the addon will calibrate automatically if your cycle is of a different timing from NA servers whenever a bonus crop is harvested. If you know what today’s bonus crop is, you can manually update it if it’s incorrect. If you don’t, plant one of everything and it’ll detect and update the cycle the next day.
+- “Did I do my farm today on X?” - smart tracking for any alts that perform farming activities if they have the Addon enabled. Specifically, harvesting crops or doing the Ironpaw Token daily quest from Halfhill Market which is given by a different Master each day.
 - Uses in-game tooltip for each of the crops so any addons like TSM or Auctionator that enrich tooltips and show things like which alts have how many items will work.
 - Nomi’s Cooking Bell status/different interface if a character has this in their bags.
 
@@ -55,7 +58,9 @@ It’s lightweight, at around 100kb as of v1.0.
 
 ### Optional Login Message
 - Configurable checkbox to toggle login notifications (default off)
-- When enabled, displays mouseable/clickable item link on login: `[Jogu] Plant [Scallions] today for bonus crops tomorrow!`
+- When enabled, displays mouseable/clickable item link on login: `[Jogu Knows] Plant [Scallions] today for bonus crops tomorrow!`
+- When an alt logs in with the Addon enabled, their current kill-status on world bosses will be updated and stored. This can be checked by clicking the "Jogu Knows More" button in the interface.
+- When a new World Boss is killed for the first time they will be activated and the current kill-status will be shown for all of your alts.
 
 ### Cooking School Bell / Nomi Integration
 - Detects if character has Cooking School Bell (item 86425) in inventory
@@ -117,19 +122,25 @@ It’s lightweight, at around 100kb as of v1.0.
 10. White Turnip (74850)
 
 ### Timing:
-- Reset time: 15:00 UTC daily (2:00 AM Sydney/Melbourne AEDT)
+- Region-aware daily reset times (fixed UTC, no DST adjustment):
+  - NA/OCE: 15:00 UTC
+  - Europe: 07:00 UTC
+  - Korea/Taiwan/China: 00:00 UTC
+- Region detected automatically via `GetCurrentRegion()`
+- Weekly resets: NA/OCE and EU on Wednesday, KR/TW/CN on Thursday
+- Algorithm uses `GetServerTime()` for reliable UTC time regardless of region
 - Reference epoch: January 4, 2026 15:00 UTC = Start of Witchberries (Day 1) farming window
-- User verified: Jan 10, 2026 Sydney = Scallions (Day 6) - consistent with epoch
-- Algorithm uses `GetServerTime()` for reliable UTC time
 
 ### Frame Creation:
 - Frame created at PLAYER_LOGIN (hidden) to ensure UI panel system fully registers it
 - Prevents first `/jogu` command from failing
-- Takes approximately 30kb of RAM (v0.6 baseline)
+- World boss kill status checked on each character login and stored in SavedVariables
+- Takes approximately 100kb of RAM (v1.0)
 
 ### Data Storage:
 - Realm calibration: `JoguDB.realmCalibration[realmName]` (epoch day and crop index)
-- Character tracking: `JoguDB.characters["RealmName-CharacterName"]` (harvest/quest epochs, level, class)
+- Character tracking: `JoguDB.characters["RealmName-CharacterName"]` (harvest/quest epochs, level, class, world boss kills)
+- World boss weekly lockouts: stored per-character with weekly epoch, auto-reset on new week
 - Login message preference: `JoguDB.showLoginMessage` (boolean)
 
 ### Alt Tracking Detection Logic:
@@ -137,90 +148,15 @@ It’s lightweight, at around 100kb as of v1.0.
 - Constraint 1: Must be at Sunsong Ranch (`GetSubZoneText()`)
 - Constraint 2: Core crops must be quantity 5-10 (exact bonus harvest amounts)
 - Constraint 3: Edge seeds can be any quantity (Motes 89112, Ores 72092-72094, Lotus 72096, Leather 72120, Cloth 72988)
+- **Auto-calibration:** If quantity is exactly 7 or 10 (bonus crop indicators), the addon detects which crop is today's bonus and auto-corrects the cycle position if the current prediction is wrong
 
 **QUEST_TURNED_IN Event** (level 90 only):
 - Quest IDs: 30328-30332 (Master Token dailies only)
 - Nomi quest (31337) remains separate and doesn't affect tracking
 
----
-
-## Development History & Key Fixes
-
-### v0.6 Issues
-**Files not appearing on Windows filesystem:** Previous Claude session used container tools - fixed by using Desktop Commander MCP tool with actual Windows filesystem access
-
-**Wrong crop prediction:** Incorrect epoch date/timezone handling - fixed by user verification of Jan 10 = Scallions (Day 6)
-
-**Seed icons instead of crop icons:** Fixed by updating to crop item IDs (74840-74850)
-
-**Text overlapping icons:** Fixed by increasing circle radius to 115px with proper spacing
-
-**First `/jogu` command fails:** `ShowUIPanel()` fails when frame created and shown in same execution - fixed by creating frame at PLAYER_LOGIN (hidden)
-
-**Memory leak (2-3kb/sec):** `OnUpdate` script with string concatenation - fixed by removing all OnUpdate scripts
-
-**Gold highlight appearing inside icon:** `UI-ActionButton-Border` glows inward - fixed by using BackdropTemplate with WHITE8x8 edge file (2px gold border, 3px outside)
-
-**UpdateJoguUI nil error:** Function declared after being called - fixed with forward declaration
-
-**"Correct Crop" button misalignment:** Fixed by anchoring to checkbox for vertical alignment
-
-### v0.7 Issues
-
-**Column alignment in Expanded Content:** Icons appeared right-aligned instead of centered - fixed by calculating equal column widths (93px each) and centering icons/headers at column centers (140px and 233px from left edge)
-
-**Button overlap:** Calibration button and Expanded Content button overlapping - fixed by moving calibration "?" to left side near prediction text, Expanded Content button to bottom-right aligned with checkbox
-
-**Sorting logic:** Characters with level <90 need special handling for quest completion - treated as questDone=true for sorting purposes (can't complete quests, should appear in "all done" section)
+**PLAYER_LOGIN Event:**
+- World boss kill status checked via `C_QuestLog.IsQuestFlaggedCompleted()` for Sha, Galleon, Nalak, Oondasta, and Ordos
 
 ---
 
-## What Didn't Work
-
-- `ShowUIPanel()` on frame creation in same execution - fails silently
-- Creating new function references in `OnShow` handler - memory leak
-- String concatenation in `OnUpdate` (even minimal) - memory leak from Lua GC
-- `[target=mouseover]` macro syntax (from macro generator project) - invalid in WoW Classic
-- `UI-ActionButton-Border` texture for highlight border - glows inward instead of outward
-- Initial column alignment attempts using right-aligned positioning - fixed by using equal-width columns with centered positioning
-
----
-
-## Current State (v1.0 Complete)
-
-✅ Fully functional crop prediction
-✅ Correct 10-day cycle calculation
-✅ Proper timezone handling (15:00 UTC reset)
-✅ Professional UI with profession-like window behavior
-✅ Clickable Cooking School Bell integration
-✅ No memory leaks
-✅ `/jogu` works reliably on first use
-✅ Login message with clickable item link
-✅ Realm calibration for different server cycles
-✅ Gold outer border highlight (not inner glow)
-✅ Calibration mode fade effect for clarity
-✅ **Alt Farm Report with automatic detection**
-✅ **Integrated dual-panel layout (crop predictions + alt tracking)**
-✅ **Manual completion toggles**
-✅ **Priority-based sorting**
-✅ **Class-colored character names**
-✅ **Multi-realm character suffix detection**
-✅ **World boss lockout tracking (Sha/Gal/Nal/Oon/Ord)**
-✅ **Jogu Knows More expansion panel**
-
----
-
-## Potential Future Functionality
-
-### Console Command Status (`/jogu status`)
-Print character farming status to chat console with aligned columns, colored status text, and same sorting as the Alt Farm Report panel.
-
-### Server Detection and Cycle Positioning Automation
-Automatic detection of crop cycle position per region to eliminate need for manual calibration outside NA/OCE.
-
-### Wago.io/WowUp Distribution
-Automated release pipeline with BigWigs Packager, GitHub Actions, and X-Wago-ID integration.
-
----
-
-*Version: 1.0 - March 23, 2026*
+*Version: 1.0 - March 24, 2026*
