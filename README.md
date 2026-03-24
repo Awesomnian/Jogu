@@ -1,14 +1,11 @@
 # 🐟 Jogu Knows
+![](https://raw.githubusercontent.com/Awesomnian/Jogu/refs/heads/main/tia_and_lady_penelope_oinkstein.png)
 
 **Author:** Awesomnia
 **GitHub:** https://github.com/awesomnian
 **Version:** 1.0
-**Addon location:**
-Either right-click and save-as the TOC and LUA files into the below folder (or wherever your MoP Classic folder lives) or right-click and save-as the .zip file and extract it to that folder.
-```
-C:\Program Files (x86)\World of Warcraft\_classic_\Interface\AddOns\Jogu
-```
-Once this is all working well and some final functionality is confirmed/completed, this will be available for addon managers.
+
+It's now live! Download from your favourite addon manager or get it from https://addons.wago.io/addons/jogu or https://www.curseforge.com/wow/addons/jogu-knows
 
 ---
 
