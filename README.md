@@ -2,7 +2,9 @@
 ![](https://raw.githubusercontent.com/Awesomnian/Jogu/refs/heads/main/tia_and_lady_penelope_oinkstein.png)
 
 **Author:** Awesomnia
+
 **GitHub:** https://github.com/awesomnian
+
 **Version:** 1.0
 
 It's now live! Download from your favourite addon manager or get it from https://addons.wago.io/addons/jogu or https://www.curseforge.com/wow/addons/jogu-knows
@@ -13,7 +15,7 @@ It's now live! Download from your favourite addon manager or get it from https:/
 
 Jogu the Drunk is an NPC in World of Warcraft who would tell you what to plant today for bonus crops tomorrow. His predictions have not worked for most of Mists of Pandaria Classic and he’s been recently forced into rehab. We’re still able to get messages from him which are shared via this addon.
 
-As his surprisingly un-fatal blood-alcohol level has dropped, his prescience has grown exponentially and he can now tell which characters have defeated world bosses each week!
+As his, surprisingly non-fatal, blood-alcohol level has dropped, his prescience has grown exponentially and he can now tell which characters have defeated world bosses each week!
 
 Type /jogu to open interface.
 
