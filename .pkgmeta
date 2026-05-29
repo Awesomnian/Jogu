@@ -8,3 +8,7 @@ ignore:
   - screenshots
   - "*.zip"
   - RELEASE_GUIDE.md
+  - CHANGELOG.md
+  - PATCH_NOTES_1.1.md
+  - "PATCH_NOTES_*.md"
+  - .planning

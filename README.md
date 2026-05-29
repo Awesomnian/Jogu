@@ -1,161 +1,96 @@
 # 🐟 Jogu Knows
-![](https://raw.githubusercontent.com/Awesomnian/Jogu/refs/heads/main/tia_and_lady_penelope_oinkstein.png)
 
-**Author:** Awesomnia
+Jogu Knows is a World of Warcraft addon for Mists of Pandaria Classic. It tells you which crop to plant today for a bonus harvest tomorrow at your Sunsong Ranch, and it tracks your daily status for profession cooldowns, farming activity, as well as weekly world-boss kills across all of your characters.
 
-**GitHub:** https://github.com/awesomnian
+![Jogu Knows artwork featuring Tia and Lady Penelope Oinkstein](screenshots/tia_and_lady_penelope_oinkstein.png)
 
-**Version:** 1.0
-
-It's now live! Download from your favourite addon manager or get it from https://addons.wago.io/addons/jogu or https://www.curseforge.com/wow/addons/jogu-knows
-
----
+Available from your addon manager: [Wago](https://addons.wago.io/addons/jogu) or [CurseForge](https://www.curseforge.com/wow/addons/jogu-knows). Type `/jogu` in game to open the window.
 
 ## Purpose
 
-Jogu the Drunk is an NPC in World of Warcraft who would tell you what to plant today for bonus crops tomorrow. His predictions have not worked for most of Mists of Pandaria Classic and he’s been recently forced into rehab. We’re still able to get messages from him which are shared via this addon.
+Jogu the Drunk is an NPC who used to tell you what to plant today for bonus crops tomorrow. His predictions stopped working for most of Mists of Pandaria Classic, and he has been quietly forced into rehab. We are still able to get messages from him, and this addon shares them.
 
-As his, surprisingly non-fatal, blood-alcohol level has dropped, his prescience has grown exponentially and he can now tell which characters have defeated world bosses each week!
+As his (surprisingly non-fatal) blood-alcohol level has dropped, his prescience has grown. He can now tell which of your characters have done their farming each day, which have completed their Ironpaw daily, which have used their daily profession craft, and which have defeated each weekly world boss.
 
-Type /jogu to open interface.
+## What it does
 
-It’s lightweight, at around 100kb as of v1.0.
+A single combined window shows the 10-day crop rotation as a wheel on the left and a per-character roster on the right. Today's bonus crop carries a soft golden glow, and the roster covers every character that has farmed at least once.
 
----
+- Predicts tomorrow's bonus crop, with a countdown to the daily reset and an optional login message (off by default).
+- Calibrates the cycle per region, by hand or automatically, for any region that ever sits at a different point in the rotation. NA and OCE share a verified default; other regions fall back to it unless calibrated.
+- Tracks per character on the right of the window: daily profession cooldowns, crop harvesting, the Ironpaw Token daily, and weekly world boss lockouts (Nalak, Oondasta, Celestial Court, Ordos).
+- Shows Nomi's Cooking School Bell status on the left of the window, with a clickable bell to summon them if your character has this in their inventory.
+- Updates live as you play. Harvesting a crop, turning in the Ironpaw daily, killing a world boss, or casting a tracked profession daily refreshes the relevant icon immediately.
+- Adds a character to the roster only when they perform a qualifying farm action (harvest crops or complete the Ironpaw daily). Logging in alone does not add an alt; this keeps the roster to characters who actually farm.
+- Uses the real in-game item tooltip for each crop, so tooltip addons such as Auctionator and TradeSkillMaster enrich them as usual.
 
-## TL;DR
+## How to install it
 
-- A message on login telling you what the bonus for tomorrow is - default to off.
-- Where in the cycle your current server is and ability to manually update this if it’s not correct, this will be remembered and predictions will be accurate from then on.
-- Added smart detection for servers that may be at a different part of the cycle, the addon will calibrate automatically if your cycle is of a different timing from NA servers whenever a bonus crop is harvested. If you know what today’s bonus crop is, you can manually update it if it’s incorrect. If you don’t, plant one of everything and it’ll detect and update the cycle the next day.
-- “Did I do my farm today on X?” - smart tracking for any alts that perform farming activities if they have the Addon enabled. Specifically, harvesting crops or doing the Ironpaw Token daily quest from Halfhill Market which is given by a different Master each day.
-- Uses in-game tooltip for each of the crops so any addons like TSM or Auctionator that enrich tooltips and show things like which alts have how many items will work.
-- Nomi’s Cooking Bell status/different interface if a character has this in their bags.
+The simplest way is an addon manager. Search for "Jogu Knows" in the Wago app or the CurseForge app and install from there.
 
----
+To install manually:
 
-## Current Functionality
+1. Download the packaged addon from the Releases page on GitHub, or from Wago or CurseForge.
+2. Extract the archive. The folder inside must be named exactly `Jogu`. If you used GitHub's "Download ZIP" button, rename the extracted `Jogu-main` folder to `Jogu`.
+3. Move the `Jogu` folder into `World of Warcraft\_classic_\Interface\AddOns\`.
+4. Restart World of Warcraft, or type `/reload` if it is already running.
 
-### Visual Crop Cycle Display
-- Shows all 10 crops in a circular arrangement
-- Hovering over any crop shows the in-game item tooltip (enriched with Auctionator/TradeSkillMaster data if installed)
-- Tomorrow's bonus crop is highlighted with a gold outer border and outline font
+## How to use it
 
-### Tomorrow's Bonus Prediction
-- Highlights which crop to plant today for bonus yield tomorrow
-- "Plant [Crop] today!" message displayed prominently
-- Shows time remaining until crops ripen (15:00 UTC daily reset)
+1. Type `/jogu` to open the window.
+2. Plant the highlighted crop today to get the bonus tomorrow. The "Plant [Crop] today!" line names it.
+3. If the highlighted crop is wrong for your server, click the `?` button and select the crop that was today's bonus. This calibration is saved per region and is used from then on; it also overrides the default for every other realm in that same region. The addon will check for bonus crops out-of-cycle and will automatically update the cycle if it is wrong, such as when Blizzard changed the cycle positioning in early May.
+4. Optionally tick "Show prediction on login" to receive the prediction as a chat message at login.
+5. Optionally also tick "Specific crops" and click the `?` next to it to pick only the crops you want a login message about. Useful if you only care about the high-value ones.
+6. Optionally tick "Hide world bosses" to narrow the window to just the daily columns (cooldowns, harvesting, Ironpaw).
+7. Optionally untick "Characters align top" to vertically centre the roster on the crop wheel instead of pinning it to the top.
+8. If you have characters on other realms, they will be displayed with a -[XX] suffix, with the first 2 characters of that realm name. Characters on the majority realm will not have a suffix, if you have an even spread of characters across realms, all will have the suffix.
 
-### Realm Calibration ("?" Button)
-- Different servers may have different points in the 10-day cycle
-- Default calculation is calibrated for the NA/OCE region (verified identical on Arugal and Pagle)
-- "?" button (left side near prediction text) allows users in other regions to calibrate
-- Clicking enters calibration mode: UI fades except crop wheel and prompt
-- User clicks whichever crop was TODAY's bonus on their server
-- Calibration saved per-realm in SavedVariables
-- All characters on that realm will use the calibrated cycle going forward
+All settings save across every character on your account.
 
-### Optional Login Message
-- Configurable checkbox to toggle login notifications (default off)
-- When enabled, displays mouseable/clickable item link on login: `[Jogu Knows] Plant [Scallions] today for bonus crops tomorrow!`
-- When an alt logs in with the Addon enabled, their current kill-status on world bosses will be updated and stored. This can be checked by clicking the "Jogu Knows More" button in the interface.
-- When a new World Boss is killed for the first time they will be activated and the current kill-status will be shown for all of your alts.
-
-### Cooking School Bell / Nomi Integration
-- Detects if character has Cooking School Bell (item 86425) in inventory
-- If present, shows whether Nomi's daily quest (A Token of Appreciation, quest 31337) has been completed that day
-- Bell icon is clickable to summon Nomi directly from the Jogu window
-- Green text if quest completed: "You have received Nomi's gift today."
-- Red text if quest not done: "You have not received your gift from Nomi today."
-- Section hidden entirely if character doesn't have the bell
-
-### Alt Farm Report (integrated right panel)
-- Alt tracking is displayed in the right half of the main window
-- **Automatic Registration:** Characters auto-register when they harvest crops or complete Master Token dailies
-- **Harvest Tracking:** Detects crop harvesting at Sunsong Ranch (5-10 core crops OR edge item seeds)
-- **Master Token Dailies:** Tracks completion of 5 Master Token quests (level 90 only):
-  - Truffle Shuffle (30330)
-  - Mile High Grub (30331)
-  - Fatty Goatsteak (30332)
-  - Thousand Year Dumpling (30328)
-  - Cindergut Peppers (30329)
-- **Manual Toggles:** Click status icons (green check/red X) to manually mark completion
-- **Smart Sorting:** Priority-based (both incomplete → farm incomplete → quest incomplete → both complete), then alphabetical
-- **Character Management:** Delete button (X) removes characters from tracking
-- **Class Coloring:** Character names use class colors for easy identification
-
-### Window Behavior
-- `/jogu` slash command toggles the prediction window
-- Draggable window - can be repositioned anywhere on screen
-- Uses UIPanelLayout for profession-like window management (aligns with Spellbook, Professions, etc.)
-- Pressing ESC closes the window
-- Dynamic height adjustment based on Cooking School Bell presence
-- "?" calibration button aligned left with prediction text
-- "Jogu Knows More >" button opens world boss lockout panel
-
----
-
-## Crop Bonus System
+## Crop yields
 
 | Condition | Yield |
-|-----------|-------|
+|---|---|
 | Normal harvest | 5 crops |
-| Bonus day | 7 crops (+2) |
-| "Plump" proc | 8 crops (+3) |
-| Bonus day + Plump | 10 crops (+5) |
+| Bonus day | 7 crops (plus 2) |
+| Plump proc | 8 crops (plus 3) |
+| Bonus day and Plump | 10 crops (plus 5) |
 
----
+A 7 or 10 stack of any crop is the signature of a bonus harvest. The addon uses this to auto-calibrate the cycle if its prediction was wrong.
 
-## Technical Details
+## Caveats and limitations
 
-### 10-Day Rotation Cycle (in order):
-1. Witchberries (74846)
-2. Jade Squash (74847)
-3. Striped Melon (74848)
-4. Green Cabbage (74840)
-5. Juicycrunch Carrot (74841)
-6. Scallions (74843)
-7. Mogu Pumpkin (74842)
-8. Red Blossom Leek (74844)
-9. Pink Turnip (74849)
-10. White Turnip (74850)
+Tracking for other characters reflects the last time each one logged in with the addon enabled. A character you have not played recently shows its last known state, not live data.
 
-### Timing:
-- Region-aware daily reset times (fixed UTC, no DST adjustment):
-  - NA/OCE: 15:00 UTC
-  - Europe: 07:00 UTC
-  - Korea/Taiwan/China: 00:00 UTC
-- Region detected automatically via `GetCurrentRegion()`
-- Weekly resets: NA/OCE and EU on Wednesday, KR/TW/CN on Thursday
-- Algorithm uses `GetServerTime()` for reliable UTC time regardless of region
-- Reference epoch: January 4, 2026 15:00 UTC = Start of Witchberries (Day 1) farming window
+- Profession cooldown tracking covers Alchemy, Tailoring, Inscription, Blacksmithing, Engineering, and Leatherworking. The character must know the specific daily-cooldown recipe; if it does not, that slot stays greyed. Jewelcrafting has no tracked daily cooldown. Engineering get a daily cooldown with the release of Siege of Orgrimmar, [Jard's Peculiar Energy Source](https://www.wowhead.com/mop-classic/spell=139176/jards-peculiar-energy-source)
+- Harvest, Farm Token, and Nomi status are recorded when the action happens while the addon is loaded. They persist across sessions, but something you did before the addon first loaded that day may not be detected until you do it again.
+- A character only joins the roster after their first qualifying farm action (harvest or Ironpaw daily). If you remove a character from the roster, the next harvest or Ironpaw turn-in re-adds them with their professions and any world boss kills already on file.
 
-### Frame Creation:
-- Frame created at PLAYER_LOGIN (hidden) to ensure UI panel system fully registers it
-- Prevents first `/jogu` command from failing
-- World boss kill status checked on each character login and stored in SavedVariables
-- Takes approximately 100kb of RAM (v1.0)
 
-### Data Storage:
-- Realm calibration: `JoguDB.realmCalibration[realmName]` (epoch day and crop index)
-- Character tracking: `JoguDB.characters["RealmName-CharacterName"]` (harvest/quest epochs, level, class, world boss kills)
-- World boss weekly lockouts: stored per-character with weekly epoch, auto-reset on new week
-- Login message preference: `JoguDB.showLoginMessage` (boolean)
+## Requirements
 
-### Alt Tracking Detection Logic:
-**CHAT_MSG_LOOT Event** (level 86+):
-- Constraint 1: Must be at Sunsong Ranch (`GetSubZoneText()`)
-- Constraint 2: Core crops must be quantity 5-10 (exact bonus harvest amounts)
-- Constraint 3: Edge seeds can be any quantity (Motes 89112, Ores 72092-72094, Lotus 72096, Leather 72120, Cloth 72988)
-- **Auto-calibration:** If quantity is exactly 7 or 10 (bonus crop indicators), the addon detects which crop is today's bonus and auto-corrects the cycle position if the current prediction is wrong
+- World of Warcraft: Mists of Pandaria Classic (interface 50400).
+- No other addons are required. Auctionator or TradeSkillMaster are optional and only enrich the crop tooltips if you have them.
 
-**QUEST_TURNED_IN Event** (level 90 only):
-- Quest IDs: 30328-30332 (Master Token dailies only)
-- Nomi quest (31337) remains separate and doesn't affect tracking
 
-**PLAYER_LOGIN Event:**
-- World boss kill status checked via `C_QuestLog.IsQuestFlaggedCompleted()` for Sha, Galleon, Nalak, Oondasta, and Ordos
 
----
+## Technical details
 
-*Version: 1.0 - March 24, 2026*
+<details>
+
+<summary>Rotation, timing, cycle anchor, storage, and detection</summary>
+
+**10-day rotation, in order:** Witchberries (74846), Jade Squash (74847), Striped Melon (74848), Green Cabbage (74840), Juicycrunch Carrot (74841), Scallions (74843), Mogu Pumpkin (74842), Red Blossom Leek (74844), Pink Turnip (74849), White Turnip (74850).
+
+**Timing:** Daily reset times are region-aware and fixed in UTC with no DST adjustment: NA and OCE at 15:00, Europe at 07:00, Korea, Taiwan, and China at 00:00. The region is detected via `GetCurrentRegion()`, and `GetServerTime()` provides UTC time.
+
+**Cycle anchor:** Every region uses the same default starting point (`DEFAULT_CYCLE_ANCHOR`), set to the verified Arugal-AU and Pagle position. The crop order itself has never changed; only the position relative to the calendar shifts when Blizzard moves it (uncertain frequency, happened early May and was caught by server calibration logic). When a shift happens, the default anchor and a `CYCLE_VERSION` integer are bumped in source; any previously stored calibration whose `cycleVersion` no longer matches is discarded silently on load, so the new default takes over for everyone. A region's calibration only overrides the default for that one region.
+
+**Data storage (SavedVariables `JoguDB`):** regional calibration overrides in `JoguDB.regionCalibration[regionID]`, each entry stamped with the `cycleVersion` it was saved under; per-character data in `JoguDB.characters["RealmName-CharacterName"]`, including harvest, Ironpaw, and Nomi epochs, level, class, weekly world boss kill weeks, and primary professions with daily cooldown expiry times; first-kill reveal flags for future-content bosses in `JoguDB.bossEverKilled[questID]`; the set of message-filter crop indices in `JoguDB.selectedCrops`; and the `showLoginMessage`, `onlySelectedCrops`, `alignTop`, and `hideWorldBosses` preferences.
+
+**Detection:** At Sunsong Ranch, loot of 5 to 10 core crops (or any quantity of edge seeds) marks a harvest. Loot lines that arrive in the same frame are summed first, so a Plump harvest that splits across inventory stacks (for example 8 arriving as 1 then 7) is read as the real total and does not falsely trigger calibration. A genuine total of 7 or 10 still auto-corrects the cycle position if the current prediction is wrong, writing the override to the region's calibration entry so every realm in that region benefits. Master Token dailies (30328 to 30332) mark the Farm Token, and any tracked Nomi cooking daily (31820 and 31332 to 31337) marks Nomi for that character. World boss kills are read with `C_QuestLog.IsQuestFlaggedCompleted()` and refreshed both on login and live as each weekly-credit quest auto-turns-in (this is a backend thing, not an actual in-game quest handin), so the icon flips full-colour the instant the boss dies. Profession cooldowns are read with `GetProfessions()`, `GetProfessionInfo()`, and `GetSpellCooldown()`, refreshed on login and the moment a tracked daily craft succeeds.
+
+</details>
+
+Version 1.1.0, May 2026.

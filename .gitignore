@@ -1,4 +1,4 @@
-# WoW Addon - Jogu Knows
+# WoW Addon - Jogu
 # Ignore archived versions and development files
 
 # Archive directories
@@ -14,6 +14,12 @@ OLD Versions/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Planning / working files (project-discipline)
+.planning/
+
+# Internal release-process notes (kept locally only, not tracked in repo)
+RELEASE_GUIDE.md
 
 # Editor files
 *.swp
