@@ -2,8 +2,6 @@
 
 Jogu Knows is a World of Warcraft addon for Mists of Pandaria Classic. It tells you which crop to plant today for a bonus harvest tomorrow at your Sunsong Ranch, and it tracks your daily status for profession cooldowns, farming activity, as well as weekly world-boss kills across all of your characters.
 
-![Jogu Knows artwork featuring Tia and Lady Penelope Oinkstein](screenshots/tia_and_lady_penelope_oinkstein.png)
-
 Available from your addon manager: [Wago](https://addons.wago.io/addons/jogu) or [CurseForge](https://www.curseforge.com/wow/addons/jogu-knows). Type `/jogu` in game to open the window.
 
 ## Purpose
@@ -44,7 +42,7 @@ To install manually:
 5. Optionally also tick "Specific crops" and click the `?` next to it to pick only the crops you want a login message about. Useful if you only care about the high-value ones.
 6. Optionally tick "Hide world bosses" to narrow the window to just the daily columns (cooldowns, harvesting, Ironpaw).
 7. Optionally untick "Characters align top" to vertically centre the roster on the crop wheel instead of pinning it to the top.
-8. If you have characters on other realms, they will be displayed with a -[XX] suffix, with the first 2 characters of that realm name. Characters on the majority realm will not have a suffix, if you have an even spread of characters across realms, all will have the suffix.
+8. If you have characters on other realms, they will be displayed with a -[XX] suffix, with the first 2 characters of that realm name. Characters on the majority realm will not have a suffix, if you have an even spread of characters across realms, all will have the suffi
 
 All settings save across every character on your account.
 
