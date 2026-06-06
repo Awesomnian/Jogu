@@ -1,7 +1,7 @@
 -- Jogu Knows: Crop Prediction Addon for MoP Classic
 -- Predicts tomorrow's bonus crop for Sunsong Ranch
 -- Interface: 50400 (MoP Classic)
--- Version: 1.1-beta - single combined window: crop wheel + Nomi on the left, and a per-character
+-- Version: 1.1.1 - single combined window: crop wheel + Nomi on the left, and a per-character
 --                     roster (profession cooldowns, Farm, Ironpaw, world bosses) on the right.
 --                     Adds: Characters-align-top toggle, Hide-world-bosses (narrows the window),
 --                     and a "Specific crops" login message filter with a calibration-style picker.
@@ -380,24 +380,34 @@ end
 -- local so RegisterCharacter can call this when a char is added/re-added.
 UpdateWorldBossStatus = function()
     local key = RegisterCharacter(false)
-    if not key then return end  -- character not on the Jogu list yet; nothing to update
+    if not key then return false end  -- character not on the Jogu list yet; nothing to update
     local data = JoguDB.characters[key]
     if not data.worldBosses then
         data.worldBosses = {}
     end
     local currentWeek = GetCurrentWeekEpoch()
+    local changed = false
     for _, boss in ipairs(WORLD_BOSSES) do
         if C_QuestLog.IsQuestFlaggedCompleted(boss.questID) then
-            data.worldBosses[boss.questID] = currentWeek
+            if data.worldBosses[boss.questID] ~= currentWeek then
+                data.worldBosses[boss.questID] = currentWeek
+                changed = true
+            end
             -- Reveal future-content bosses once killed on any character
             if boss.futureContent and not JoguDB.bossEverKilled[boss.questID] then
                 JoguDB.bossEverKilled[boss.questID] = true
+                changed = true
             end
         end
     end
-    if JoguFrame and JoguFrame:IsVisible() then
+    -- Repaint the open roster only when a flag actually flipped. This lets high-frequency callers
+    -- (the ENCOUNTER_END retry scans, zone changes) refresh the window live -- the instant the
+    -- kill credit lands -- without rebuilding every row on each incidental scan. Same live
+    -- in-window behaviour the Ironpaw / harvest paths already give.
+    if changed and JoguFrame and JoguFrame:IsVisible() then
         UpdateExpandedPanel()
     end
+    return changed
 end
 
 -- Return (tomorrowDay, currentDay) cycle indices. Always returns valid values -- every region
@@ -1512,6 +1522,9 @@ eventFrame:RegisterEvent("QUEST_TURNED_IN")
 eventFrame:RegisterEvent("QUEST_ACCEPTED")
 eventFrame:RegisterEvent("CHAT_MSG_LOOT")
 eventFrame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+eventFrame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+eventFrame:RegisterEvent("ENCOUNTER_END")
 eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
     if event == "ADDON_LOADED" and arg1 == "Jogu" then
         Jogu_OnLoad()
@@ -1539,6 +1552,16 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
             if JoguDB.onlySelectedCrops and not (JoguDB.selectedCrops and JoguDB.selectedCrops[tomorrowDay]) then
                 pass = false
             end
+            -- Skip the reminder if this character has already farmed today. Harvesting and
+            -- replanting almost always happen in the same farm visit, so once the Farmed status is
+            -- done for the day the "plant X today" nudge is redundant. Uses the same per-character
+            -- daily check as the Farmed roster icon (lastHarvestEpoch == today) so the two stay in
+            -- lockstep. Untracked characters have no entry, so they still get the message.
+            local farmKey = GetRealmName() .. "-" .. UnitName("player")
+            local farmData = JoguDB.characters and JoguDB.characters[farmKey]
+            if farmData and farmData.lastHarvestEpoch == GetCurrentEpochDay() then
+                pass = false
+            end
             if pass then
                 local cropData = CROPS[tomorrowDay]
                 local itemLink = select(2, GetItemInfo(cropData.id))
@@ -1554,6 +1577,31 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
             end
         end
         
+    elseif event == "ENCOUNTER_END" then
+        -- Primary instant trigger for world-boss kills -- the equivalent of the QUEST_TURNED_IN
+        -- credit that makes the Ironpaw icon flip live in the open window. Payload: arg1 =
+        -- encounterID, then encounterName, difficultyID, groupSize, success (so success is the
+        -- 4th value in ...). On a kill the hidden weekly lockout flag is set, but it can lag the
+        -- encounter-end by a moment, so rescan now and again shortly after. UpdateWorldBossStatus
+        -- only repaints the open roster when a flag actually flips, so the extra scans are cheap.
+        local success = select(4, ...)
+        if (success == 1 or success == true) and UnitLevel("player") >= 86 then
+            UpdateWorldBossStatus()
+            C_Timer.After(2, UpdateWorldBossStatus)
+            C_Timer.After(5, UpdateWorldBossStatus)
+        end
+
+    elseif event == "PLAYER_ENTERING_WORLD" or event == "ZONE_CHANGED_NEW_AREA" then
+        -- Backstop for world-boss kill credit. A kill auto-completes a hidden weekly lockout
+        -- quest, but the client does not reliably fire QUEST_TURNED_IN for it (notably the
+        -- Celestial Court / Ordos), so the kill would only show after a /reload. Re-scanning the
+        -- boss flags on every zone transition mirrors how the rest of the roster refreshes, so the
+        -- icon flips full-colour as soon as the player zones away from the boss. UpdateWorldBossStatus
+        -- calls RegisterCharacter(false) and no-ops if this character isn't on the Jogu list yet.
+        if UnitLevel("player") >= 86 then
+            UpdateWorldBossStatus()
+        end
+
     elseif event == "QUEST_TURNED_IN" then
         local questID = arg1
         -- Track Master Token daily quest completion (level 90 only)

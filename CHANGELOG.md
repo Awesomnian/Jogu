@@ -1,5 +1,10 @@
 # Jogu Knows
 
+## [v1.1.1](https://github.com/Awesomnian/Jogu/tree/v1.1.1) (2026-06-06)
+[Full Changelog](https://github.com/Awesomnian/Jogu/compare/v1.1.0...v1.1.1)
+
+Updated boss-kill detection to work in real time and not require a reload. A world boss kill now registers the moment the boss dies, via the encounter-end event, so the weekly lockout icon flips live in the open window, matching how Ironpaw, harvesting and profession cooldowns already update. The roster repaints only when a kill flag actually changes, and the zone and login rescans stay as a fallback. Also added an icon for the addon menu (IconTexture in the TOC) so Jogu Knows shows its own icon instead of the default question mark. The login prediction now stays quiet for a character that has already farmed that day, since at that point the planting is effectively done.
+
 ## [v1.1.0](https://github.com/Awesomnian/Jogu/tree/v1.1.0) (2026-05-28)
 [Full Changelog](https://github.com/Awesomnian/Jogu/compare/v1.0.0...v1.1.0)
 
