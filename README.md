@@ -38,11 +38,11 @@ To install manually:
 1. Type `/jogu` to open the window.
 2. Plant the highlighted crop today to get the bonus tomorrow. The "Plant [Crop] today!" line names it.
 3. If the highlighted crop is wrong for your server, click the `?` button and select the crop that was today's bonus. This calibration is saved per region and is used from then on; it also overrides the default for every other realm in that same region. The addon will check for bonus crops out-of-cycle and will automatically update the cycle if it is wrong, such as when Blizzard changed the cycle positioning in early May.
-4. Optionally tick "Show prediction on login" to receive the prediction as a chat message at login.
+4. Optionally tick "Show prediction on login" to receive the prediction as a chat message at login. The message is skipped on any character that has already farmed that day, since at that point the planting is effectively done.
 5. Optionally also tick "Specific crops" and click the `?` next to it to pick only the crops you want a login message about. Useful if you only care about the high-value ones.
 6. Optionally tick "Hide world bosses" to narrow the window to just the daily columns (cooldowns, harvesting, Ironpaw).
 7. Optionally untick "Characters align top" to vertically centre the roster on the crop wheel instead of pinning it to the top.
-8. If you have characters on other realms, they will be displayed with a -[XX] suffix, with the first 2 characters of that realm name. Characters on the majority realm will not have a suffix, if you have an even spread of characters across realms, all will have the suffi
+8. If you have characters on other realms, they will be displayed with a -[XX] suffix, with the first 2 characters of that realm name. Characters on the majority realm will not have a suffix; if you have an even spread of characters across realms, all will have the suffix.
 
 All settings save across every character on your account.
 

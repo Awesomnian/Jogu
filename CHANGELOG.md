@@ -1,5 +1,10 @@
 # Jogu Knows
 
+## [v1.1.2](https://github.com/Awesomnian/Jogu/tree/v1.1.2) (2026-06-08)
+[Full Changelog](https://github.com/Awesomnian/Jogu/compare/v1.1.1...v1.1.2)
+
+Fixed profession cooldown icons staying lit past the daily reset. The previous logic stored an absolute expiry timestamp computed from the spellbook's reported 22-24 hour duration, but the MoP profession dailies actually clear at the regional reset hour, not after a rolling 24 hours. Cooldown state is now tracked as the farming epoch day on which the cast happened, so the icon clears automatically at the reset boundary even if the alt is offline.
+
 ## [v1.1.1](https://github.com/Awesomnian/Jogu/tree/v1.1.1) (2026-06-06)
 [Full Changelog](https://github.com/Awesomnian/Jogu/compare/v1.1.0...v1.1.1)
 

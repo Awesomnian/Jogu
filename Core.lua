@@ -349,24 +349,27 @@ UpdateProfessions = function()
             local name, icon, _, _, _, _, skillLine = GetProfessionInfo(idx)
             local cdSpell = GetProfessionCooldownSpell(skillLine)
             -- Read the live cooldown for THIS character. start>0 with a long duration means the
-            -- daily cooldown is ticking (it's been used). Convert the remaining time to an
-            -- absolute server timestamp so alts (and future sessions) can tell, WITHOUT needing
-            -- to know the exact daily reset time -- the icon greys out the instant the real
-            -- cooldown ends. Default (off cooldown / spell unknown) = 0 = available/grey.
-            local cdExpiry = (prevProfs[slot] and prevProfs[slot].skillLine == skillLine
-                and prevProfs[slot].cdExpiry) or 0
+            -- daily cooldown is ticking (it's been used). MoP profession dailies are daily-reset
+            -- cooldowns, not 24h rolling, so we mark the farming epoch day on which the cast
+            -- happened and the icon clears automatically at the regional daily reset boundary
+            -- (when GetCurrentEpochDay advances), without needing the alt to log back in. The
+            -- old cdExpiry-timestamp approach was wrong for daily-reset cooldowns because the
+            -- spellbook's reported 22-24h duration never lined up with the actual reset time.
+            local lastUsedEpochDay = (prevProfs[slot] and prevProfs[slot].skillLine == skillLine
+                and prevProfs[slot].lastUsedEpochDay) or nil
             if cdSpell then
                 local start, duration = GetSpellCooldown(cdSpell)
                 if start and start > 0 and duration and duration > 60 then
-                    cdExpiry = GetServerTime() + (start + duration - GetTime())
-                else
-                    cdExpiry = 0
+                    lastUsedEpochDay = GetCurrentEpochDay()
                 end
+                -- If the cooldown is NOT active, we deliberately leave lastUsedEpochDay alone.
+                -- Worst case it's a stale value from yesterday or earlier -- still correctly
+                -- evaluates as "available" because it won't equal today's GetCurrentEpochDay().
             end
             newProfs[slot] = {
                 name = name, icon = icon, skillLine = skillLine,
                 hasCD = (cdSpell ~= nil), cdSpell = cdSpell,
-                cdExpiry = cdExpiry,
+                lastUsedEpochDay = lastUsedEpochDay,
             }
         end
     end
@@ -664,7 +667,15 @@ UpdateExpandedPanel = function()
             local p = profData and profData[slot]
             if p and p.hasCD then
                 local profName = p.name
-                local used = (p.cdExpiry or 0) > GetServerTime()
+                -- "Used today" means the cooldown was last cast on the current farming epoch
+                -- day. Once GetCurrentEpochDay() advances past the regional reset hour, the
+                -- stored value no longer matches and the icon clears, even if the alt is
+                -- offline. This is correct for daily-reset cooldowns (the MoP profession
+                -- default) and gracefully wrong-in-the-favourable-direction for any rolling
+                -- cooldowns: the icon may clear an hour or two before a true 24h rolling
+                -- cooldown actually expires, but the user will see the game reject the cast
+                -- and is no worse off than checking it manually.
+                local used = (p.lastUsedEpochDay or 0) == GetCurrentEpochDay()
                 local profBtn = CreateFrame("Button", nil, row)
                 profBtn:SetSize(CD, CD)
                 profBtn:SetPoint("LEFT", row, "LEFT", COOLDOWN_X[slot], 0)
