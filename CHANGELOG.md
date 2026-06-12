@@ -1,5 +1,14 @@
 # Jogu Knows
 
+## [v1.1.3](https://github.com/Awesomnian/Jogu/tree/v1.1.3) (2026-06-10)
+[Full Changelog](https://github.com/Awesomnian/Jogu/compare/v1.1.2...v1.1.3)
+
+Two fixes for issues that surfaced on the weekly reset.
+
+Weekly world boss flags no longer carry over a day past the NA/OCE reset. The region's weekly reference day was set to a Wednesday, but NA and OCE world bosses actually reset on Tuesday at 15:00 UTC. The reference is now anchored on Tuesday so the addon's week boundary lines up with the game's. The first /reload after updating will roll the computed week forward and clear any stale looted markers from last week.
+
+Clicking the Cooking School Bell icon in the window now summons Nomi as intended. The secure button was relying on the default click registration which doesn't reliably fire on all builds; it now explicitly registers for any mouse-up while hovered.
+
 ## [v1.1.2](https://github.com/Awesomnian/Jogu/tree/v1.1.2) (2026-06-08)
 [Full Changelog](https://github.com/Awesomnian/Jogu/compare/v1.1.1...v1.1.2)
 

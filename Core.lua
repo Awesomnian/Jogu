@@ -70,7 +70,7 @@ local DEFAULT_CYCLE_ANCHOR = { epochDay = 20600, cropIndex = 4 }
 -- Region-specific reset configuration (all times fixed UTC, no DST adjustment)
 -- GetCurrentRegion(): 1=US/OCE, 2=Korea, 3=Europe, 4=Taiwan, 5=China
 local REGION_RESET_CONFIG = {
-    [1] = { dailyResetHour = 15, weeklyRefEpochDay = 20460 },  -- NA/OCE: 15:00 UTC, Wed Jan 7 2026
+    [1] = { dailyResetHour = 15, weeklyRefEpochDay = 20459 },  -- NA/OCE: 15:00 UTC, Tue Jan 6 2026 (weekly resets land on Tuesday for this region)
     [2] = { dailyResetHour = 0,  weeklyRefEpochDay = 20461 },  -- Korea:  00:00 UTC, Thu Jan 8 2026
     [3] = { dailyResetHour = 7,  weeklyRefEpochDay = 20460 },  -- Europe: 07:00 UTC, Wed Jan 7 2026
     [4] = { dailyResetHour = 0,  weeklyRefEpochDay = 20461 },  -- Taiwan: 00:00 UTC, Thu Jan 8 2026
@@ -1139,6 +1139,11 @@ local function CreateJoguFrame()
     -- left column. Y offset +12 puts the bell centre at y=-504 (the section's centre is -516).
     frame.bellButton:SetPoint("LEFT", frame.nomiSection, "LEFT", 0, 12)
     frame.bellButton:SetSize(32, 32)
+    -- Without an explicit RegisterForClicks call, the secure click handler only fires for the
+    -- default mouse-up event, which depending on the WoW build can mean the click is ignored if
+    -- the user releases the button slightly outside the secure pickup window. Registering for
+    -- AnyUp makes the bell summon Nomi on any mouse-button release while hovering.
+    frame.bellButton:RegisterForClicks("AnyUp")
     frame.bellButton:SetAttribute("type", "item")
     frame.bellButton:SetAttribute("item", "Cooking School Bell")
 
