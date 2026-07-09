@@ -1541,6 +1541,7 @@ eventFrame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
 eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 eventFrame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 eventFrame:RegisterEvent("ENCOUNTER_END")
+eventFrame:RegisterEvent("QUEST_LOG_UPDATE")
 eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
     if event == "ADDON_LOADED" and arg1 == "Jogu" then
         Jogu_OnLoad()
@@ -1614,6 +1615,23 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1, ...)
         -- boss flags on every zone transition mirrors how the rest of the roster refreshes, so the
         -- icon flips full-colour as soon as the player zones away from the boss. UpdateWorldBossStatus
         -- calls RegisterCharacter(false) and no-ops if this character isn't on the Jogu list yet.
+        if UnitLevel("player") >= 86 then
+            UpdateWorldBossStatus()
+        end
+
+    elseif event == "QUEST_LOG_UPDATE" then
+        -- Authoritative catch-all for world-boss kill credit. The weekly lockout is a hidden quest,
+        -- and C_QuestLog.IsQuestFlaggedCompleted only reads true once the server's completed-quest
+        -- data is present client-side. That data is NOT loaded yet at PLAYER_LOGIN / PLAYER_ENTERING_
+        -- WORLD, the outdoor bosses (Nalak/Oondasta/Celestials/Ordos) do not reliably fire
+        -- ENCOUNTER_END, and its +2s/+5s retries can miss a flag that lags the kill -- so the other
+        -- scans routinely read the flag as still-false and drop the kill, which then only "sticks"
+        -- after enough relogs happen to catch a scan while the flag is loaded. QUEST_LOG_UPDATE fires
+        -- exactly when quest data (including the completed-quest flags) syncs or changes: a moment
+        -- after a kill flags the lockout, and shortly after each login once the data arrives. Re-
+        -- scanning here records the kill reliably the first time, in the same session. The scan is
+        -- cheap and UpdateWorldBossStatus only repaints the open roster when a flag actually flips,
+        -- so riding this frequently-firing event costs effectively nothing.
         if UnitLevel("player") >= 86 then
             UpdateWorldBossStatus()
         end

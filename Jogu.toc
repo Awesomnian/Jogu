@@ -3,7 +3,7 @@
 ## Notes: Predicts tomorrow's bonus crop for your Sunsong Ranch and tracks per-character farming, cooldowns, Ironpaw token, Nomi and weekly world bosses in one combined window.
 ## IconTexture: Interface\Icons\INV_Misc_Head_Murloc_01
 ## Author: Awesomnia
-## Version: 1.1.3
+## Version: 1.1.5
 ## X-Curse-Project-ID: 1493600
 ## X-Wago-ID: b6XePoKp
 ## SavedVariables: JoguDB

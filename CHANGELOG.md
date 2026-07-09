@@ -1,5 +1,10 @@
 # Jogu Knows
 
+## [v1.1.5](https://github.com/Awesomnian/Jogu/tree/v1.1.5) (2026-07-09)
+[Full Changelog](https://github.com/Awesomnian/Jogu/compare/v1.1.4...v1.1.5)
+
+World boss kills now record reliably on the first login, instead of only sticking after several logout and login cycles. The weekly lockouts are hidden quests whose completed status the client cannot read until the server finishes sending its quest data, which lands a moment after a kill and a moment after each login. The addon was only checking on events that fire before that data arrives (login, entering world, zone change) or that the outdoor bosses do not reliably send (encounter end), so it often read the flag as not-done and dropped the kill. It now also re-checks on the quest-log update event, which fires exactly when that data syncs, so a kill is captured the first time on the character that got it. Applies to Nalak, Oondasta, the Celestial Court and Ordos.
+
 ## [v1.1.3](https://github.com/Awesomnian/Jogu/tree/v1.1.3) (2026-06-10)
 [Full Changelog](https://github.com/Awesomnian/Jogu/compare/v1.1.2...v1.1.3)
 
